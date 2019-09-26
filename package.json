@@ -1,0 +1,25 @@
+{
+    "name": "@baileyherbert/packr",
+    "description": "Command line tool for packaging PHP projects into single files.",
+    "version": "1.0.0",
+    "license": "MIT",
+    "author": {
+        "name": "Bailey Herbert",
+        "email": "bailey.herbert@hotmail.com"
+    },
+    "bin": {
+        "packr": "./bin/packr.js"
+    },
+    "dependencies": {
+        "chalk": "^2.4.2",
+        "convict": "^5.1.0",
+        "mkdirp": "^0.5.1",
+        "recursive-readdir": "^2.2.2"
+    },
+    "devDependencies": {
+        "@types/convict": "^4.2.1",
+        "@types/mkdirp": "^0.5.2",
+        "@types/node": "^12.7.8",
+        "@types/recursive-readdir": "^2.2.0"
+    }
+}

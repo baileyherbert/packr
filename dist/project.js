@@ -1,0 +1,148 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const path = require("path");
+const fs = require("fs");
+const convict = require("convict");
+const schema_1 = require("./config/schema");
+const namespace_1 = require("./namespace");
+const terminal_1 = require("./terminal");
+const user_error_1 = require("./error/user-error");
+class Project {
+    constructor(targetDirectory) {
+        this.targetDirectory = targetDirectory;
+        this.config = convict(schema_1.default);
+        this.directoryPath = path.resolve(targetDirectory);
+        this.configFilePath = path.join(this.directoryPath, 'packr.json');
+        // Check that the cwd exists
+        if (!fs.existsSync(this.directoryPath)) {
+            throw new user_error_1.UserError('Directory does not exist: ' + this.directoryPath);
+        }
+        // Check for the packr.json file
+        if (!fs.existsSync(this.configFilePath)) {
+            throw new user_error_1.UserError('Packr project not found at ' + this.directoryPath);
+        }
+    }
+    /**
+     * Loads the project's configuration and validates it.
+     */
+    async load() {
+        this.config.loadFile(this.configFilePath);
+        this.config.validate();
+    }
+    /**
+     * Generates and returns the contents of the bundled file as a string.
+     */
+    async compile() {
+        let bitsArray = await this.getBitsArray();
+        let mainMethodName = this.getMainMethod();
+        let configEncoded = fs.readFileSync(this.configFilePath).toString('base64');
+        let buildInfoEncoded = this.getBuildInformation();
+        let debugging = terminal_1.Terminal.hasFlag('--debug', '-d') ? 'true' : 'false';
+        return this.getFilledTemplate({
+            bitsArray, mainMethodName, configEncoded, buildInfoEncoded, debugging
+        });
+    }
+    /**
+     * Returns information about the current build in base64 encoding.
+     */
+    getBuildInformation() {
+        return Buffer.from(JSON.stringify({
+            built_at: Math.floor(new Date().getTime() / 1000)
+        }, null, 4)).toString('base64');
+    }
+    /**
+     * Returns a string containing autoloader bits in a PHP array.
+     */
+    async getBitsArray() {
+        let bits = await this.getBits();
+        let array = `array(\n`;
+        bits.forEach(bit => {
+            array += `            '${bit.name}' => '${bit.value}',\n`;
+        });
+        return array.replace(/,\n$/, '\n') + '        )';
+    }
+    /**
+     * Returns an array of all autoloader bits.
+     */
+    async getBits() {
+        let namespaces = this.getNamespaces();
+        let bits = [];
+        for (let i = 0; i < namespaces.length; i++) {
+            (await namespaces[i].getBits()).forEach(bit => {
+                bits.push(bit);
+            });
+        }
+        return bits;
+    }
+    /**
+     * Returns an array of all namespaces in the project (will be cached on repeated invocations).
+     */
+    getNamespaces() {
+        if (!this.namespaces) {
+            this.namespaces = [];
+            let mappedNamespaces = this.config.get('namespaces');
+            // Add the Packr namespace
+            this.namespaces.push(new namespace_1.Namespace(this, 'Packr\\', path.join(__dirname, '../static/Packr')));
+            // Add namespaces from the configuration file
+            for (let namespace in mappedNamespaces) {
+                let namespaceName = namespace.replace(/\\$/g, '') + '\\';
+                let namespacePath = path.join(this.directoryPath, mappedNamespaces[namespace]);
+                this.namespaces.push(new namespace_1.Namespace(this, namespaceName, namespacePath));
+            }
+        }
+        return this.namespaces;
+    }
+    /**
+     * Returns the contents of the bundle template after replacing the values given in the `values` object.
+     *
+     * @param values
+     */
+    getFilledTemplate(values) {
+        let template = fs.readFileSync(path.join(__dirname, '../static/template.php')).toString();
+        for (let name in values) {
+            template = template.replace(`\${${name}}`, values[name]);
+        }
+        return template;
+    }
+    /**
+     * Resolves the namespace of a file within a mapped namespace.
+     *
+     * @param mappedNamespace
+     * @param mappedPath
+     * @param filePath
+     */
+    resolveNamespace(mappedNamespace, mappedPath, filePath) {
+        if (!filePath.startsWith(mappedPath))
+            throw new Error('Mapped file path mismatch');
+        let relativePath = filePath.substring(mappedPath.length);
+        let className = relativePath.replace(/\.php$/i, '').replace('/', '\\');
+        return (mappedNamespace + className).replace(/\\\\/g, '\\');
+    }
+    /**
+     * Converts the given absolute path into a path relative to the project's root directory.
+     *
+     * @param absolutePath
+     */
+    getRelativePath(absolutePath) {
+        if (absolutePath.startsWith(this.directoryPath)) {
+            return absolutePath.substring(this.directoryPath.length + 1);
+        }
+        return absolutePath;
+    }
+    /**
+     * Returns the main method of the project in the format `Path\To\Class::methodName`.
+     */
+    getMainMethod() {
+        let className = this.config.get('main');
+        if (className.indexOf('::') < 0)
+            className += '::main';
+        return className;
+    }
+    /**
+     * Returns an absolute path to the output file.
+     */
+    getOutputPath() {
+        return path.resolve(this.directoryPath, this.config.get('out'));
+    }
+}
+exports.Project = Project;
