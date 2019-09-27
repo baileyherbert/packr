@@ -10,6 +10,10 @@
     "bin": {
         "packr": "./bin/packr.js"
     },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/baileyherbert/packr.git"
+    },
     "dependencies": {
         "chalk": "^2.4.2",
         "convict": "^5.1.0",
