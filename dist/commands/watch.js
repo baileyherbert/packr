@@ -41,10 +41,17 @@ async function watch(args) {
 }
 exports.watch = watch;
 async function handleFileChange(args, filePath) {
+    let rebuild = (async () => {
+        // Rebuild
+        wip = build_1.build(args);
+        await wip;
+        wip = undefined;
+    });
     // Reload the project if the config file is changed
     if (filePath == project.getConfigPath()) {
         project = new project_1.Project(path.resolve(process.cwd(), args[0] || '.'));
         await project.load();
+        await rebuild();
     }
     // Skip if this isn't a .php file
     if (!filePath.match(/\.php$/i))
@@ -53,7 +60,5 @@ async function handleFileChange(args, filePath) {
     if (!project.getNamespaces().filter(namespace => filePath.startsWith(namespace.getPath())).length)
         return;
     // Rebuild
-    wip = build_1.build(args);
-    await wip;
-    wip = undefined;
+    await rebuild();
 }

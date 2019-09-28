@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import * as convict from 'convict';
+import * as mkdirp from 'mkdirp';
 
 import schema from './config/schema';
 import { Namespace, Bit } from './namespace';
@@ -49,9 +50,28 @@ export class Project {
         let buildInfoEncoded =  this.getBuildInformation();
         let debugging = Terminal.hasFlag('--debug', '-d') ? 'true' : 'false';
 
-        return this.getFilledTemplate({
+        // Generate the bundle
+        let bundle = this.getFilledTemplate({
             bitsArray, mainMethodName, configEncoded, buildInfoEncoded, debugging
         });
+
+        // Ensure the output directory exists
+        mkdirp.sync(path.dirname(this.getOutputPath()));
+
+        // Write the bundle file
+        fs.writeFileSync(this.getOutputPath(), bundle);
+        let stream = fs.createWriteStream(this.getOutputPath(), { flags: 'a' });
+
+        // Append embedded files
+        for (let file of this.getEmbeddedFiles()) {
+            let reader = fs.createReadStream(file.path);
+            await new Promise(resolve => {
+                reader.pipe(stream, { end: false });
+                reader.on('end', resolve);
+            });
+        }
+
+        stream.end();
     }
 
     /**
@@ -60,7 +80,15 @@ export class Project {
     private getBuildInformation() {
         return Buffer.from(JSON.stringify({
             built_at: Math.floor(new Date().getTime() / 1000),
-            bits: this.bits.map(bit => bit.name)
+            bits: this.bits.map(bit => bit.name),
+            files: this.getEmbeddedFiles().map(file => {
+                if (!fs.existsSync(file.path)) {
+                    throw new UserError(`Cannot find embedded file: ${file.path}`);
+                }
+
+                let size = fs.readFileSync(file.path).length;
+                return { name: file.name, size };
+            })
         }, null, 4)).toString('base64');
     }
 
@@ -94,6 +122,27 @@ export class Project {
         }
 
         return this.bits;
+    }
+
+    /**
+     * Returns an array of all embedded files in the project.
+     */
+    public getEmbeddedFiles() {
+        let files : EmbeddedFile[] = [];
+        let configured = this.config.get('files');
+
+        for (let name in configured) {
+            let relativePath = configured[name];
+            let realPath = path.resolve(this.directoryPath, relativePath);
+
+            files.push({
+                name,
+                originalName: relativePath,
+                path: realPath
+            });
+        }
+
+        return files;
     }
 
     /**
@@ -188,3 +237,9 @@ export class Project {
     }
 
 }
+
+export type EmbeddedFile = {
+    name: string;
+    originalName: string;
+    path: string;
+};

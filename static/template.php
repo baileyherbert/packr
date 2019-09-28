@@ -20,6 +20,7 @@
 
 */
 
+define('PACKR_BUNDLE_FILE', __FILE__);
 define('PACKR_DEBUGGING', ${debugging});
 define('PACKR_CONFIG', '${configEncoded}');
 define('PACKR_BUILD', '${buildInfoEncoded}');
@@ -51,4 +52,4 @@ if (ini_get('suhosin.executor.disable_eval')) {
 Packr\Debugger::init();
 ${mainMethodName}();
 
-?>
+__halt_compiler();;;

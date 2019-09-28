@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const path = require("path");
 const fs = require("fs");
 const convict = require("convict");
+const mkdirp = require("mkdirp");
 const schema_1 = require("./config/schema");
 const namespace_1 = require("./namespace");
 const terminal_1 = require("./terminal");
@@ -38,9 +39,24 @@ class Project {
         let configEncoded = fs.readFileSync(this.configFilePath).toString('base64');
         let buildInfoEncoded = this.getBuildInformation();
         let debugging = terminal_1.Terminal.hasFlag('--debug', '-d') ? 'true' : 'false';
-        return this.getFilledTemplate({
+        // Generate the bundle
+        let bundle = this.getFilledTemplate({
             bitsArray, mainMethodName, configEncoded, buildInfoEncoded, debugging
         });
+        // Ensure the output directory exists
+        mkdirp.sync(path.dirname(this.getOutputPath()));
+        // Write the bundle file
+        fs.writeFileSync(this.getOutputPath(), bundle);
+        let stream = fs.createWriteStream(this.getOutputPath(), { flags: 'a' });
+        // Append embedded files
+        for (let file of this.getEmbeddedFiles()) {
+            let reader = fs.createReadStream(file.path);
+            await new Promise(resolve => {
+                reader.pipe(stream, { end: false });
+                reader.on('end', resolve);
+            });
+        }
+        stream.end();
     }
     /**
      * Returns information about the current build in base64 encoding.
@@ -48,7 +64,14 @@ class Project {
     getBuildInformation() {
         return Buffer.from(JSON.stringify({
             built_at: Math.floor(new Date().getTime() / 1000),
-            bits: this.bits.map(bit => bit.name)
+            bits: this.bits.map(bit => bit.name),
+            files: this.getEmbeddedFiles().map(file => {
+                if (!fs.existsSync(file.path)) {
+                    throw new user_error_1.UserError(`Cannot find embedded file: ${file.path}`);
+                }
+                let size = fs.readFileSync(file.path).length;
+                return { name: file.name, size };
+            })
         }, null, 4)).toString('base64');
     }
     /**
@@ -76,6 +99,23 @@ class Project {
             }
         }
         return this.bits;
+    }
+    /**
+     * Returns an array of all embedded files in the project.
+     */
+    getEmbeddedFiles() {
+        let files = [];
+        let configured = this.config.get('files');
+        for (let name in configured) {
+            let relativePath = configured[name];
+            let realPath = path.resolve(this.directoryPath, relativePath);
+            files.push({
+                name,
+                originalName: relativePath,
+                path: realPath
+            });
+        }
+        return files;
     }
     /**
      * Returns an array of all namespaces in the project (will be cached on repeated invocations).

@@ -29,5 +29,10 @@ exports.default = {
         doc: 'Namespaces and their source directories to include in the bundle for autoloading.',
         format: Object,
         default: {}
+    },
+    files: {
+        doc: 'An object containing files to include in the bundle. The keys should be identifiers, and the value a relative path.',
+        format: Object,
+        default: {}
     }
 };
