@@ -40,6 +40,14 @@ class Bundle {
         return self::$buildInfo;
     }
 
+    public static function getEncodingMode() {
+        return self::getBuildInfo()->encoding;
+    }
+
+    public static function getCompressionMode() {
+        return self::getBuildInfo()->fileCompression;
+    }
+
     public static function getFile($name, $processor = null, $chunkSize = 4096) {
         // Check that the file exists
         $original = self::getBuildInfo()->files;

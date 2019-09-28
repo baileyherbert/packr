@@ -48,8 +48,17 @@ spl_autoload_register(function ($className) {
 });
 
 if (ini_get('suhosin.executor.disable_eval')) {
+    http_response_code(500);
     echo 'Packr: Cannot execute the bundle because eval() is disabled on the interpreter.';
     exit(1);
+}
+
+if (!function_exists('gzinflate')) {
+    if (Packr\Bundle::getEncodingMode() == 'deflate' || Packr\Bundle::getCompressionMode() == 'deflate') {
+        http_response_code(500);
+        echo 'Packr: The zlib extension must be enabled to execute this bundle.';
+        exit(1);
+    }
 }
 
 Packr\Debugger::init();
