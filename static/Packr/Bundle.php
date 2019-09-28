@@ -82,6 +82,10 @@ class Bundle {
             $processor($chunk);
         }
 
+        // Decompression
+        $mode = static::getBuildInfo()->fileCompression;
+        if ($mode == 'deflate') $data = gzinflate($data);
+
         fclose($handle);
         return $data;
     }

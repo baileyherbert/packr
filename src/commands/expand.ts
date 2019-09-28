@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as mkdirp from 'mkdirp';
+import * as zlib from 'zlib';
 import chalk from 'chalk';
 import { UserError } from '../error/user-error';
 import { Terminal } from '../terminal';
@@ -78,6 +79,8 @@ export async function expand(args: string[]) {
     // Read build info
     let buildInfoText = Buffer.from(buildInfoMatch[1], 'base64').toString();
     let buildInfo = JSON.parse(buildInfoText);
+    let bitEncodingMode : ('base64' | 'deflate') = buildInfo.encoding;
+    let fileCompressionMode : ('deflate' | null) = buildInfo.fileCompression;
 
     // Parse bits
     let bitsLines = bitsArrayMatch[1].trim().split(/\n+/);
@@ -95,10 +98,17 @@ export async function expand(args: string[]) {
                         if (bitPath.toLowerCase() == namespacePath) {
                             let filePath = path.join(namespaces[prefix], bitPath.substring(prefix.length) + '.php');
                             let fileDirPath = path.dirname(filePath);
+                            let fileData = Buffer.from(encoded, 'base64');
+                            let originalSize = fileData.length;
+
+                            if (bitEncodingMode == 'deflate') fileData = zlib.inflateRawSync(fileData);
+
+                            let expandedPercent = Math.floor(((fileData.length - originalSize) / originalSize) * 100 + 0.5);
+                            let stamp = (expandedPercent > 0 ? `(inflated ${expandedPercent}%)` : '');
 
                             mkdirp.sync(fileDirPath);
-                            fs.writeFileSync(filePath, '<?php\n\n' + Buffer.from(encoded, 'base64').toString());
-                            console.log(chalk.green('+ Restored:'), filePath);
+                            fs.writeFileSync(filePath, '<?php\n\n' + fileData.toString());
+                            console.log(chalk.green('+ Restored:'), filePath, stamp);
 
                             break;
                         }
@@ -147,7 +157,19 @@ export async function expand(args: string[]) {
             }
 
             fs.close(outputHandle, (err) => {});
-            console.log(chalk.cyan('+ Extracted:'), file.extractPath);
+
+            let originalSize = fs.statSync(file.extractPath).size;
+            let expandedSize = originalSize;
+
+            if (fileCompressionMode == 'deflate') {
+                fs.writeFileSync(file.extractPath, zlib.inflateRawSync(fs.readFileSync(file.extractPath)));
+                expandedSize = fs.statSync(file.extractPath).size;
+            }
+
+            let expandedPercent = Math.floor(((expandedSize - originalSize) / originalSize) * 100 + 0.5);
+            let stamp = (expandedPercent > 0 ? `(inflated ${expandedPercent}%)` : '');
+
+            console.log(chalk.cyan('+ Extracted:'), file.extractPath, stamp);
         };
 
         fs.close(handle, (err) => {});

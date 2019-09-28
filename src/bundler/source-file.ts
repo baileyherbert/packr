@@ -1,11 +1,12 @@
 import * as fs from 'fs';
+import { Namespace } from '../namespace';
 
 export class SourceFile {
 
-    private namespace : string;
+    private namespaceName : string;
 
-    public constructor(private className: string, private path: string) {
-        this.namespace = className.replace(/\\[\w_]+$/, '');
+    public constructor(private namespace: Namespace, private className: string, private path: string) {
+        this.namespaceName = className.replace(/\\[\w_]+$/, '');
     }
 
     /**
@@ -26,9 +27,9 @@ export class SourceFile {
 
         let match = search.match(/^[\t ]*namespace ((?:[\w_]+\\)*[\w_]+)[\t ]*(?:;|{|$)/m);
         if (!match) throw new Error('did not specify a namespace (regex)');
-        if (match[1] != this.namespace) throw new Error(`did not match the expected namespace (${match[1]} != ${this.namespace})`);
+        if (match[1] != this.namespaceName) throw new Error(`did not match the expected namespace (${match[1]} != ${this.namespaceName})`);
 
-        return Buffer.from(content).toString('base64');
+        return this.namespace.getProject().encode(content);
     }
 
     /**
@@ -49,7 +50,7 @@ export class SourceFile {
      * Returns the mapped namespace of the source file.
      */
     public getNamespace() {
-        return this.namespace;
+        return this.namespaceName;
     }
 
 }

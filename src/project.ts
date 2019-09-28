@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as convict from 'convict';
 import * as mkdirp from 'mkdirp';
+import * as zlib from 'zlib';
 
 import schema from './config/schema';
 import { Namespace, Bit } from './namespace';
@@ -14,6 +15,7 @@ export class Project {
     private configFilePath : string;
     private config = convict(schema);
     private bits : Bit[];
+    private embeddedFiles : EmbeddedFile[];
 
     private namespaces: Namespace[];
 
@@ -64,11 +66,16 @@ export class Project {
 
         // Append embedded files
         for (let file of this.getEmbeddedFiles()) {
-            let reader = fs.createReadStream(file.path);
-            await new Promise(resolve => {
-                reader.pipe(stream, { end: false });
-                reader.on('end', resolve);
-            });
+            if (file.data) {
+                stream.write(file.data);
+            }
+            else {
+                let reader = fs.createReadStream(file.path);
+                await new Promise(resolve => {
+                    reader.pipe(stream, { end: false });
+                    reader.on('end', resolve);
+                });
+            }
         }
 
         stream.end();
@@ -81,12 +88,24 @@ export class Project {
         return Buffer.from(JSON.stringify({
             built_at: Math.floor(new Date().getTime() / 1000),
             bits: this.bits.map(bit => bit.name),
+            encoding: this.config.get('encoding'),
+            fileCompression: this.config.get('file_compression'),
             files: this.getEmbeddedFiles().map(file => {
                 if (!fs.existsSync(file.path)) {
                     throw new UserError(`Cannot find embedded file: ${file.path}`);
                 }
 
-                let size = fs.readFileSync(file.path).length;
+                let size : number;
+
+                if (this.config.get('file_compression')) {
+                    // Because compression is enabled, we need to read the file and compress it now
+                    let data = file.data = this.encodeFile(fs.readFileSync(file.path));
+                    size = data.length;
+                }
+                else {
+                    size = fs.statSync(file.path).size;
+                }
+
                 return { name: file.name, size };
             })
         }, null, 4)).toString('base64');
@@ -128,21 +147,23 @@ export class Project {
      * Returns an array of all embedded files in the project.
      */
     public getEmbeddedFiles() {
-        let files : EmbeddedFile[] = [];
-        let configured = this.config.get('files');
+        if (!this.embeddedFiles) {
+            this.embeddedFiles = [];
+            let configured = this.config.get('files');
 
-        for (let name in configured) {
-            let relativePath = configured[name];
-            let realPath = path.resolve(this.directoryPath, relativePath);
+            for (let name in configured) {
+                let relativePath = configured[name];
+                let realPath = path.resolve(this.directoryPath, relativePath);
 
-            files.push({
-                name,
-                originalName: relativePath,
-                path: realPath
-            });
+                this.embeddedFiles.push({
+                    name,
+                    originalName: relativePath,
+                    path: realPath
+                });
+            }
         }
 
-        return files;
+        return this.embeddedFiles;
     }
 
     /**
@@ -169,6 +190,31 @@ export class Project {
     }
 
     /**
+     * Encodes the given text with the project's configured encoding strategy.
+     *
+     * @param raw
+     */
+    public encode(raw: string) {
+        switch (this.config.get('encoding')) {
+            case 'deflate': return zlib.deflateRawSync(raw).toString('base64');
+            case 'gzip': return zlib.gzipSync(raw).toString('base64');
+            case 'base64': return Buffer.from(raw).toString('base64');
+        }
+    }
+
+    /**
+     * Encodes the data of an embedded file with the project's configured encoding strategy.
+     *
+     * @param raw
+     */
+    public encodeFile(data: Buffer) {
+        switch (this.config.get('file_compression')) {
+            case 'deflate': return zlib.deflateRawSync(data);
+            default: return data;
+        }
+    }
+
+    /**
      * Returns the contents of the bundle template after replacing the values given in the `values` object.
      *
      * @param values
@@ -180,7 +226,23 @@ export class Project {
             template = template.replace(`\${${name}}`, values[name]);
         }
 
-        return template;
+        return this.injectDecoder(template);
+    }
+
+    /**
+     * Injects the decoder function into the template.
+     *
+     * @param template
+     */
+    private injectDecoder(template: string) {
+        let encoding = this.config.get('encoding');
+        let decoder = fs.readFileSync(path.join(__dirname, '../static/decoder.' + encoding + '.php')).toString().trim();
+
+        // Get rid of the <?php tag
+        decoder = decoder.replace(/<\?php/, '').trim();
+
+        // Inject
+        return template.replace('/*${packr_decode}*/', decoder);
     }
 
     /**
@@ -242,4 +304,5 @@ export type EmbeddedFile = {
     name: string;
     originalName: string;
     path: string;
+    data ?: Buffer;
 };

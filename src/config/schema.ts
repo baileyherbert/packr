@@ -33,6 +33,20 @@ export default {
         doc: 'An object containing files to include in the bundle. The keys should be identifiers, and the value a relative path.',
         format: Object,
         default: {}
+    },
+    encoding: {
+        doc: 'Determines which encoding and compression to use when embedding source code into the bundle.',
+        format: ['deflate', 'base64'],
+        default: 'deflate'
+    },
+    file_compression: {
+        doc: 'Determines if and how to compress embedded files.',
+        format: (val: string) => {
+            if (val !== 'deflate' && val !== null) {
+                throw new Error('must be one of: deflate, or null');
+            }
+        },
+        default: null
     }
 
 };

@@ -18,6 +18,13 @@ export class Namespace {
     }
 
     /**
+     * Returns the project this namespace belongs to.
+     */
+    public getProject() {
+        return this.project;
+    }
+
+    /**
      * Returns an array of all bits in the namespace.
      */
     public async getBits() {
@@ -53,7 +60,7 @@ export class Namespace {
 
         return files.map(file => {
             let namespace = this.project.resolveNamespace(this.name, this.path, file);
-            return new SourceFile(namespace, file);
+            return new SourceFile(this, namespace, file);
         });
     }
 

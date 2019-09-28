@@ -16,6 +16,12 @@ class Namespace {
         return this.path;
     }
     /**
+     * Returns the project this namespace belongs to.
+     */
+    getProject() {
+        return this.project;
+    }
+    /**
      * Returns an array of all bits in the namespace.
      */
     async getBits() {
@@ -42,7 +48,7 @@ class Namespace {
         files = files.filter(file => file.toLowerCase().endsWith('.php'));
         return files.map(file => {
             let namespace = this.project.resolveNamespace(this.name, this.path, file);
-            return new source_file_1.SourceFile(namespace, file);
+            return new source_file_1.SourceFile(this, namespace, file);
         });
     }
     /**

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 const path = require("path");
 const mkdirp = require("mkdirp");
+const zlib = require("zlib");
 const chalk_1 = require("chalk");
 const user_error_1 = require("../error/user-error");
 const terminal_1 = require("../terminal");
@@ -66,6 +67,8 @@ async function expand(args) {
     // Read build info
     let buildInfoText = Buffer.from(buildInfoMatch[1], 'base64').toString();
     let buildInfo = JSON.parse(buildInfoText);
+    let bitEncodingMode = buildInfo.encoding;
+    let fileCompressionMode = buildInfo.fileCompression;
     // Parse bits
     let bitsLines = bitsArrayMatch[1].trim().split(/\n+/);
     bitsLines.forEach(line => {
@@ -80,9 +83,15 @@ async function expand(args) {
                         if (bitPath.toLowerCase() == namespacePath) {
                             let filePath = path.join(namespaces[prefix], bitPath.substring(prefix.length) + '.php');
                             let fileDirPath = path.dirname(filePath);
+                            let fileData = Buffer.from(encoded, 'base64');
+                            let originalSize = fileData.length;
+                            if (bitEncodingMode == 'deflate')
+                                fileData = zlib.inflateRawSync(fileData);
+                            let expandedPercent = Math.floor(((fileData.length - originalSize) / originalSize) * 100 + 0.5);
+                            let stamp = (expandedPercent > 0 ? `(inflated ${expandedPercent}%)` : '');
                             mkdirp.sync(fileDirPath);
-                            fs.writeFileSync(filePath, '<?php\n\n' + Buffer.from(encoded, 'base64').toString());
-                            console.log(chalk_1.default.green('+ Restored:'), filePath);
+                            fs.writeFileSync(filePath, '<?php\n\n' + fileData.toString());
+                            console.log(chalk_1.default.green('+ Restored:'), filePath, stamp);
                             break;
                         }
                     }
@@ -121,7 +130,15 @@ async function expand(args) {
                 remaining -= size;
             }
             fs.close(outputHandle, (err) => { });
-            console.log(chalk_1.default.cyan('+ Extracted:'), file.extractPath);
+            let originalSize = fs.statSync(file.extractPath).size;
+            let expandedSize = originalSize;
+            if (fileCompressionMode == 'deflate') {
+                fs.writeFileSync(file.extractPath, zlib.inflateRawSync(fs.readFileSync(file.extractPath)));
+                expandedSize = fs.statSync(file.extractPath).size;
+            }
+            let expandedPercent = Math.floor(((expandedSize - originalSize) / originalSize) * 100 + 0.5);
+            let stamp = (expandedPercent > 0 ? `(inflated ${expandedPercent}%)` : '');
+            console.log(chalk_1.default.cyan('+ Extracted:'), file.extractPath, stamp);
         }
         ;
         fs.close(handle, (err) => { });

@@ -36,11 +36,13 @@ function packr_bits() {
     return $bits;
 }
 
+/*${packr_decode}*/
+
 spl_autoload_register(function ($className) {
     $className = strtolower($className);
 
     if (array_key_exists($className, packr_bits())) {
-        eval(base64_decode(packr_bits()[$className]));
+        eval(packr_decode(packr_bits()[$className]));
         return;
     }
 });

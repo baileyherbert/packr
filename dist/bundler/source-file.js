@@ -2,10 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 class SourceFile {
-    constructor(className, path) {
+    constructor(namespace, className, path) {
+        this.namespace = namespace;
         this.className = className;
         this.path = path;
-        this.namespace = className.replace(/\\[\w_]+$/, '');
+        this.namespaceName = className.replace(/\\[\w_]+$/, '');
     }
     /**
      * Refactors the file as needed and then returns it in Base64 encoding. Throws an `Error` if there is an issue
@@ -25,9 +26,9 @@ class SourceFile {
         let match = search.match(/^[\t ]*namespace ((?:[\w_]+\\)*[\w_]+)[\t ]*(?:;|{|$)/m);
         if (!match)
             throw new Error('did not specify a namespace (regex)');
-        if (match[1] != this.namespace)
-            throw new Error(`did not match the expected namespace (${match[1]} != ${this.namespace})`);
-        return Buffer.from(content).toString('base64');
+        if (match[1] != this.namespaceName)
+            throw new Error(`did not match the expected namespace (${match[1]} != ${this.namespaceName})`);
+        return this.namespace.getProject().encode(content);
     }
     /**
      * Returns the absolute path to the source file.
@@ -45,7 +46,7 @@ class SourceFile {
      * Returns the mapped namespace of the source file.
      */
     getNamespace() {
-        return this.namespace;
+        return this.namespaceName;
     }
 }
 exports.SourceFile = SourceFile;
