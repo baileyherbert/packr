@@ -1,24 +1,24 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const project_1 = require("./project");
 const chalk_1 = require("chalk");
-const fs = require("fs");
-const path = require("path");
-const mkdirp = require("mkdirp");
 const user_error_1 = require("./error/user-error");
+const terminal_1 = require("./terminal");
+const build_1 = require("./commands/build");
+const watch_1 = require("./commands/watch");
+const expand_1 = require("./commands/expand");
 async function bootstrap() {
-    let target = process.cwd();
-    let project = new project_1.Project(target);
-    // Load the project and configuration
-    await project.load();
-    // Compile the bundled file
-    let output = await project.compile();
-    // Ensure the output directory exists
-    mkdirp.sync(path.dirname(project.getOutputPath()));
-    // Write the bundle file
-    fs.writeFileSync(project.getOutputPath(), output);
-    // Finished
-    console.log(chalk_1.default.cyan('Finished'), 'generating bundle ->', project.getOutputPath());
+    let commands = terminal_1.Terminal.getCommands('build');
+    let command = commands[0];
+    let args = commands.slice(1);
+    // Build ('build' or 'b')
+    if (command == 'build' || command == 'b')
+        return await build_1.build(args);
+    // Watch and build ('watch' or 'w')
+    if (command == 'watch' || command == 'w')
+        return await watch_1.watch(args);
+    // Expand
+    if (command == 'expand' || command == 'e')
+        return await expand_1.expand(args);
 }
 bootstrap().catch(error => {
     if (error instanceof user_error_1.UserError)
