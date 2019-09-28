@@ -40,7 +40,7 @@ class Bundle {
         return self::$buildInfo;
     }
 
-    public static function getFile($name, $processor = null) {
+    public static function getFile($name, $processor = null, $chunkSize = 4096) {
         // Check that the file exists
         $original = self::getBuildInfo()->files;
         $files = [];
@@ -65,89 +65,21 @@ class Bundle {
             };
         }
 
-        // Buffer through the bundle until we get to the start of embedded files
+        // Open the bundle file for reading
         $handle = fopen(PACKR_BUNDLE_FILE, 'rb');
         if ($handle === false) throw new Exception('Failed to read embedded file (' . $name . '): Could not open the bundle for reading');
 
-        $contents = '';
-        $prechunk = null;
-        $index = 0;
-        $offset = null;
+        // Seek to the proper position
+        fseek($handle, PACKR_EMBED_OFFSET + 3 + $bytesBefore);
+        $remaining = $bytes;
 
-        while (!feof($handle)) {
-            $contents .= fread($handle, 1024);
+        // Read the embedded file into the processor
+        while (!feof($handle) && $remaining > 0) {
+            $size = min($chunkSize, $remaining);
+            $chunk = fread($handle, $size);
+            $remaining -= strlen($chunk);
 
-            if (strlen($contents) > 2048) $contents = substr($contents, strlen($contents) - 2048);
-            if (($pos = strpos($contents, '__halt_compiler();;;')) !== false) {
-                $offset = $index + $pos + 21;
-                $prechunk = substr($contents, $pos + 21);
-                break;
-            }
-
-            $index += strlen($contents);
-        }
-
-        // Buffer through until we find our file
-        $relativeIndex = 0;
-        while (!feof($handle)) {
-            $chunk = fread($handle, 2048);
-            if (!is_null($prechunk)) {
-                $chunk = $prechunk . $chunk;
-                $prechunk = null;
-            }
-
-            // Check if the file starts in the current chunk
-            $limit = $relativeIndex + strlen($chunk);
-            if ($bytesBefore <= $limit) {
-                $prechunk = substr($chunk, $bytesBefore - $relativeIndex);
-                break;
-            }
-
-            $relativeIndex += strlen($chunk);
-        }
-
-        // Buffer the rest of the file
-        $index = $bytesBefore;
-        $lastIndex = $bytesBefore + $bytes;
-        if (feof($handle)) {
-            $chunk = $prechunk;
-
-            // Check if the file ends in this chunk
-            $limit = $index + strlen($chunk);
-            if ($lastIndex <= $limit) {
-                $chunk = substr($chunk, 0, $lastIndex - $index);
-            }
-
-            // Send the chunk
-            if (strlen($chunk) > 0) {
-                $processor($chunk);
-            }
-        }
-        else {
-            while (!feof($handle)) {
-                $chunk = fread($handle, 2048);
-                $halt = false;
-
-                if (!is_null($prechunk)) {
-                    $chunk = $prechunk . $chunk;
-                    $prechunk = null;
-                }
-
-                // Check if the file ends in this chunk
-                $limit = $index + strlen($chunk);
-                if ($lastIndex <= $limit) {
-                    $chunk = substr($chunk, 0, $lastIndex - $index);
-                    $halt = true;
-                }
-
-                // Send the chunk
-                if (strlen($chunk) > 0) {
-                    $processor($chunk);
-                }
-                if ($halt) break;
-
-                $index += strlen($chunk);
-            }
+            $processor($chunk);
         }
 
         fclose($handle);

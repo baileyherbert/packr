@@ -21,6 +21,7 @@
 */
 
 define('PACKR_BUNDLE_FILE', __FILE__);
+define('PACKR_EMBED_OFFSET', __COMPILER_HALT_OFFSET__);
 define('PACKR_DEBUGGING', ${debugging});
 define('PACKR_CONFIG', '${configEncoded}');
 define('PACKR_BUILD', '${buildInfoEncoded}');
