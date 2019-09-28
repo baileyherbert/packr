@@ -48,12 +48,14 @@ export async function watch(args: string[]) {
 }
 
 async function handleFileChange(args: string[], filePath: string) {
-    let rebuild = (async () => {
-        // Rebuild
-        wip = build(args);
-        await wip;
-        wip = undefined;
-    });
+    let rebuild = (() => new Promise(resolve => {
+        setTimeout(async () => {
+            wip = build(args);
+            await wip;
+            wip = undefined;
+            resolve();
+        }, 100);
+    }));
 
     // Reload the project if the config file is changed
     if (filePath == project.getConfigPath()) {
