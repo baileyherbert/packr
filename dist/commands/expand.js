@@ -23,7 +23,25 @@ async function expand(args) {
         throw new user_error_1.UserError(`Output directory is not empty (use --force to overwrite): ${outputDir}`);
     }
     // Read the file
-    let contents = fs.readFileSync(targetFile).toString();
+    let contents;
+    let buffer = Buffer.alloc(0);
+    let file = await openFile(targetFile, 'r');
+    let remaining = fs.statSync(targetFile).size;
+    let step = 4096;
+    while (remaining > 0) {
+        let portion = Math.min(step, remaining);
+        let chunk = await readFile(file, null, portion);
+        buffer = Buffer.concat([buffer, chunk]);
+        if (buffer.indexOf('__halt_compiler();') > 0) {
+            contents = buffer.toString();
+            break;
+        }
+    }
+    if (!contents) {
+        throw new user_error_1.UserError(`The target file is not a Packr bundle: ${targetFile}`);
+    }
+    console.log(contents);
+    process.exit();
     // Match expressions
     let configMatch = contents.match(configRegex);
     let buildInfoMatch = contents.match(buildInfoRegex);
@@ -104,9 +122,11 @@ async function expand(args) {
                 start += size;
                 remaining -= size;
             }
+            fs.close(outputHandle, (err) => { });
             console.log(chalk_1.default.cyan('+ Extracted:'), file.extractPath);
         }
         ;
+        fs.close(handle, (err) => { });
     }
     console.log('Finished expanding files.');
 }
