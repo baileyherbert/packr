@@ -174,7 +174,7 @@ export class Project {
      * @param values
      */
     private getFilledTemplate(values: Object) {
-        let template = fs.readFileSync(path.join(__dirname, '../static/template.php')).toString();
+        let template = fs.readFileSync(path.join(__dirname, '../static/template.php')).toString().trim();
 
         for (let name in values) {
             template = template.replace(`\${${name}}`, values[name]);

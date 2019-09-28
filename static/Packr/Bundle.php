@@ -70,7 +70,7 @@ class Bundle {
         if ($handle === false) throw new Exception('Failed to read embedded file (' . $name . '): Could not open the bundle for reading');
 
         // Seek to the proper position
-        fseek($handle, PACKR_EMBED_OFFSET + 3 + $bytesBefore);
+        fseek($handle, PACKR_EMBED_OFFSET + $bytesBefore);
         $remaining = $bytes;
 
         // Read the embedded file into the processor

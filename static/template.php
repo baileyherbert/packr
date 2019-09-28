@@ -53,4 +53,4 @@ if (ini_get('suhosin.executor.disable_eval')) {
 Packr\Debugger::init();
 ${mainMethodName}();
 
-__halt_compiler();;;
+__halt_compiler();
