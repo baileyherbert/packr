@@ -12,6 +12,7 @@ export class Project {
     private directoryPath : string;
     private configFilePath : string;
     private config = convict(schema);
+    private bits : Bit[];
 
     private namespaces: Namespace[];
 
@@ -58,7 +59,8 @@ export class Project {
      */
     private getBuildInformation() {
         return Buffer.from(JSON.stringify({
-            built_at: Math.floor(new Date().getTime() / 1000)
+            built_at: Math.floor(new Date().getTime() / 1000),
+            bits: this.bits.map(bit => bit.name)
         }, null, 4)).toString('base64');
     }
 
@@ -70,7 +72,7 @@ export class Project {
         let array = `array(\n`;
 
         bits.forEach(bit => {
-            array += `            '${bit.name}' => '${bit.value}',\n`;
+            array += `            '${bit.name.toLowerCase()}' => '${bit.value}',\n`;
         });
 
         return array.replace(/,\n$/, '\n') + '        )';
@@ -80,22 +82,24 @@ export class Project {
      * Returns an array of all autoloader bits.
      */
     private async getBits() {
-        let namespaces = this.getNamespaces();
-        let bits : Bit[] = [];
+        if (!this.bits) {
+            let namespaces = this.getNamespaces();
+            this.bits = [];
 
-        for (let i = 0; i < namespaces.length; i++) {
-            (await namespaces[i].getBits()).forEach(bit => {
-                bits.push(bit);
-            });
+            for (let i = 0; i < namespaces.length; i++) {
+                (await namespaces[i].getBits()).forEach(bit => {
+                    this.bits.push(bit);
+                });
+            }
         }
 
-        return bits;
+        return this.bits;
     }
 
     /**
      * Returns an array of all namespaces in the project (will be cached on repeated invocations).
      */
-    private getNamespaces() {
+    public getNamespaces() {
         if (!this.namespaces) {
             this.namespaces = [];
             let mappedNamespaces = this.config.get('namespaces');
@@ -170,10 +174,17 @@ export class Project {
     }
 
     /**
-     * Returns an absolute path to the output file.
+     * Returns the absolute path to the output file.
      */
     public getOutputPath() {
         return path.resolve(this.directoryPath, this.config.get('out'));
+    }
+
+    /**
+     * Returns the absolute path to the config file.
+     */
+    public getConfigPath() {
+        return this.configFilePath;
     }
 
 }

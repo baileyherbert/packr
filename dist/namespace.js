@@ -10,6 +10,12 @@ class Namespace {
         this.path = path;
     }
     /**
+     * Returns the absolute path to the namespace's source directory.
+     */
+    getPath() {
+        return this.path;
+    }
+    /**
      * Returns an array of all bits in the namespace.
      */
     async getBits() {
@@ -18,7 +24,7 @@ class Namespace {
         files.forEach(file => {
             try {
                 bits.push({
-                    name: file.getClassName().toLowerCase(),
+                    name: file.getClassName(),
                     value: file.compile()
                 });
             }

@@ -11,6 +11,13 @@ export class Namespace {
     }
 
     /**
+     * Returns the absolute path to the namespace's source directory.
+     */
+    public getPath() {
+        return this.path;
+    }
+
+    /**
      * Returns an array of all bits in the namespace.
      */
     public async getBits() {
@@ -20,7 +27,7 @@ export class Namespace {
         files.forEach(file => {
             try {
                 bits.push({
-                    name: file.getClassName().toLowerCase(),
+                    name: file.getClassName(),
                     value: file.compile()
                 });
             }
@@ -40,7 +47,7 @@ export class Namespace {
     /**
      * Returns an array of source files in the namespace.
      */
-    private async getFiles() {
+    public async getFiles() {
         let files = await this.getFilesRecursively(this.path);
         files = files.filter(file => file.toLowerCase().endsWith('.php'));
 

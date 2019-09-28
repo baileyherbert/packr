@@ -47,7 +47,8 @@ class Project {
      */
     getBuildInformation() {
         return Buffer.from(JSON.stringify({
-            built_at: Math.floor(new Date().getTime() / 1000)
+            built_at: Math.floor(new Date().getTime() / 1000),
+            bits: this.bits.map(bit => bit.name)
         }, null, 4)).toString('base64');
     }
     /**
@@ -57,7 +58,7 @@ class Project {
         let bits = await this.getBits();
         let array = `array(\n`;
         bits.forEach(bit => {
-            array += `            '${bit.name}' => '${bit.value}',\n`;
+            array += `            '${bit.name.toLowerCase()}' => '${bit.value}',\n`;
         });
         return array.replace(/,\n$/, '\n') + '        )';
     }
@@ -65,14 +66,16 @@ class Project {
      * Returns an array of all autoloader bits.
      */
     async getBits() {
-        let namespaces = this.getNamespaces();
-        let bits = [];
-        for (let i = 0; i < namespaces.length; i++) {
-            (await namespaces[i].getBits()).forEach(bit => {
-                bits.push(bit);
-            });
+        if (!this.bits) {
+            let namespaces = this.getNamespaces();
+            this.bits = [];
+            for (let i = 0; i < namespaces.length; i++) {
+                (await namespaces[i].getBits()).forEach(bit => {
+                    this.bits.push(bit);
+                });
+            }
         }
-        return bits;
+        return this.bits;
     }
     /**
      * Returns an array of all namespaces in the project (will be cached on repeated invocations).
@@ -139,10 +142,16 @@ class Project {
         return className;
     }
     /**
-     * Returns an absolute path to the output file.
+     * Returns the absolute path to the output file.
      */
     getOutputPath() {
         return path.resolve(this.directoryPath, this.config.get('out'));
+    }
+    /**
+     * Returns the absolute path to the config file.
+     */
+    getConfigPath() {
+        return this.configFilePath;
     }
 }
 exports.Project = Project;
