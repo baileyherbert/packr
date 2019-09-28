@@ -1,7 +1,7 @@
 {
     "name": "@baileyherbert/packr",
     "description": "Command line tool for packaging PHP projects into single files.",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "license": "MIT",
     "author": {
         "name": "Bailey Herbert",
