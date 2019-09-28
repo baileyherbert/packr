@@ -47,9 +47,6 @@ export async function expand(args: string[]) {
         throw new UserError(`The target file is not a Packr bundle: ${targetFile}`);
     }
 
-    console.log(contents);
-    process.exit();
-
     // Match expressions
     let configMatch = contents.match(configRegex);
     let buildInfoMatch = contents.match(buildInfoRegex);

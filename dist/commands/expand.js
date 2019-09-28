@@ -40,8 +40,6 @@ async function expand(args) {
     if (!contents) {
         throw new user_error_1.UserError(`The target file is not a Packr bundle: ${targetFile}`);
     }
-    console.log(contents);
-    process.exit();
     // Match expressions
     let configMatch = contents.match(configRegex);
     let buildInfoMatch = contents.match(buildInfoRegex);
