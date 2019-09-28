@@ -16,4 +16,26 @@ export class Terminal {
         }).length > 0;
     }
 
+    /**
+     * Extracts the commands from the terminal, in their original order, excluding the `packr` command itself.
+     * For example, if the user runs `packr help`, this returns `['help']`. If the user runs `packr watch help`, this
+     * returns `['watch', 'help']`. If no command is given, returns an empty array.
+     */
+    public static getCommands(defaultCommandName ?: string) : string[] {
+        let args = process.argv.slice(2);
+        let commands : string[] = [];
+
+        args.forEach(arg => {
+            if (!arg.trim().startsWith('-')) {
+                commands.push(arg);
+            }
+        });
+
+        if (defaultCommandName && commands.length === 0) {
+            return [defaultCommandName];
+        }
+
+        return commands;
+    }
+
 }

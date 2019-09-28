@@ -1,28 +1,25 @@
-import { Project } from './project';
 import chalk from 'chalk';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as mkdirp from 'mkdirp';
+
 import { UserError } from './error/user-error';
+import { Terminal } from './terminal';
+
+import { build } from './commands/build';
+import { watch } from './commands/watch';
+import { expand } from './commands/expand';
 
 async function bootstrap() {
-    let target = process.cwd();
-    let project = new Project(target);
+    let commands = Terminal.getCommands('build');
+    let command = commands[0];
+    let args = commands.slice(1);
 
-    // Load the project and configuration
-    await project.load();
+    // Build ('build' or 'b')
+    if (command == 'build' || command == 'b') return await build(args);
 
-    // Compile the bundled file
-    let output = await project.compile();
+    // Watch and build ('watch' or 'w')
+    if (command == 'watch' || command == 'w') return await watch(args);
 
-    // Ensure the output directory exists
-    mkdirp.sync(path.dirname(project.getOutputPath()));
-
-    // Write the bundle file
-    fs.writeFileSync(project.getOutputPath(), output);
-
-    // Finished
-    console.log(chalk.cyan('Finished'), 'generating bundle ->', project.getOutputPath());
+    // Expand
+    if (command == 'expand' || command == 'e') return await expand(args);
 }
 
 bootstrap().catch(error => {
