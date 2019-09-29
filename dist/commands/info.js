@@ -78,7 +78,7 @@ async function info(args) {
     console.log();
     // Storage (# classes, encoding, compression)
     drawHeader('Storage');
-    drawValue('Classes', `${numberBits.toLocaleString()} user, ${standardBits} integrated`);
+    drawValue('Classes', `${numberBits.toLocaleString()} user (+${standardBits} integrated)`);
     drawValue('Encoding', encodingMode + (encodingMode !== 'base64' ? ', base64' : ''));
     drawValue('Compression', fileCompressionMode || 'disabled');
     console.log();
@@ -86,7 +86,7 @@ async function info(args) {
     drawHeader('Embedded files');
     files.forEach(file => {
         let size = getFileSize(file.size);
-        console.log(chalk_1.default.green(`${file.name}:`), file.originalFileName, ' '.repeat(Math.max(0, 65 - (file.name.length + file.originalFileName.length + size.length + 2))), `(${size})`);
+        console.log(chalk_1.default.green(`${file.originalFileName}`), ' '.repeat(Math.max(0, 67 - (file.originalFileName.length + size.length))), size);
     });
     // Show "none" if there are no files in the bundle
     if (!files.length) {

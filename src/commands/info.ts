@@ -94,7 +94,7 @@ export async function info(args: string[]) {
 
     // Storage (# classes, encoding, compression)
     drawHeader('Storage');
-    drawValue('Classes', `${numberBits.toLocaleString()} user, ${standardBits} integrated`);
+    drawValue('Classes', `${numberBits.toLocaleString()} user (+${standardBits} integrated)`);
     drawValue('Encoding', encodingMode + (encodingMode !== 'base64' ? ', base64' : ''));
     drawValue('Compression', fileCompressionMode || 'disabled');
     console.log();
@@ -104,10 +104,9 @@ export async function info(args: string[]) {
     files.forEach(file => {
         let size = getFileSize(file.size);
         console.log(
-            chalk.green(`${file.name}:`),
-            file.originalFileName,
-            ' '.repeat(Math.max(0, 65 - (file.name.length + file.originalFileName.length + size.length + 2))),
-            `(${size})`
+            chalk.green(`${file.originalFileName}`),
+            ' '.repeat(Math.max(0, 67 - (file.originalFileName.length + size.length))),
+            size
         );
     });
 
