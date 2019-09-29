@@ -18,7 +18,7 @@ exports.default = {
                 throw new Error('must be a valid class name');
             }
         },
-        default: 'Application'
+        default: 'App\\Application'
     },
     out: {
         doc: 'Relative or absolute path to the bundled output file.',
@@ -27,8 +27,7 @@ exports.default = {
     },
     namespaces: {
         doc: 'Namespaces and their source directories to include in the bundle for autoloading.',
-        format: Object,
-        default: {}
+        format: Object
     },
     files: {
         doc: 'An object containing files to include in the bundle. The keys should be identifiers, and the value a relative path.',
