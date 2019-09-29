@@ -75,10 +75,10 @@ class Application {
 }
 ```
 
-Finally, open a terminal in the project's root directory and run `packr build`. A bundle file called `bundle.packr.php` will be created in the same directory. You can run it with PHP or through a web server:
+Finally, open a terminal in the project's root directory and run `packr build`. A bundle file called `bundle.php` will be created in the same directory. You can run it with PHP or through a web server:
 
 ```
-> php bundle.packr.php
+> php bundle.php
 Hello world!
 ```
 
@@ -150,7 +150,7 @@ This is a list of all available configuration options. If your file specifies op
 | `version`          | string   | The version of the bundle in no particular format. This is visible to anyone with access to the bundle. Defaults to `1.0.0`. |
 | `author`           | string   | The author of the bundle in no particular format. This is visible to anyone with access to the bundle. |
 | `main`             | string   | The full name of a class and a static method to call when the bundle is executed. Defaults to `App\Application::main`. |
-| `out`              | string   | The name or path of the bundle file to which output will be written. Relative paths are resolved relative to the project's root directory. Defaults to `bundle.packr.php`. |
+| `out`              | string   | The name or path of the bundle file to which output will be written. Relative paths are resolved relative to the project's root directory. Defaults to `bundle.php`. |
 | `namespaces`       | object   | An object containing your PHP namespaces and their source directories. The key is always the namespace prefix and the value is always a path to a directory containing source files under that namespace. |
 | `files`            | object   | An object containing the files to embed in the bundle. The key is always a name or identifier for the file (used to retrieve it from within the bundle), and the value is a path to the file. |
 | `encoding`         | string   | The type of encoding and/or compression to use. The current allowed values are `deflate` (default) and `base64`. |

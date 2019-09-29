@@ -19,7 +19,7 @@ exports.default = {
     },
     out: {
         format: String,
-        default: 'bundle.packr.php'
+        default: 'bundle.php'
     },
     namespaces: {
         format: Object,
