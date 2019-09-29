@@ -65,6 +65,11 @@ class Bundle {
         // Get the size (in bytes) of the file
         $bytes = $files[$name]->size;
 
+        // Disallow buffering when compression is enabled
+        if (self::getCompressionMode() !== null && $processor !== null) {
+            throw new Exception('Cannot buffer file "' . $name . '" because compression is enabled');
+        }
+
         // Use a default processor if one is not supplied
         $data = '';
         if (is_null($processor)) {
