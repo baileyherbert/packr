@@ -22,8 +22,11 @@ class ConfigurationStore {
         for (let propName in this.schema) {
             let { format, required } = this.schema[propName];
             let value = this.config[propName];
-            if (typeof value == 'undefined' && required) {
-                throw new Error(`Missing required configuration option "${propName}"`);
+            if (typeof value == 'undefined') {
+                if (required) {
+                    throw new Error(`Missing required configuration option "${propName}"`);
+                }
+                continue;
             }
             let types = {
                 'object': Object,

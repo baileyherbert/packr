@@ -29,8 +29,12 @@ export class ConfigurationStore<T> {
             let { format, required } = this.schema[propName];
             let value : SchemaFormatType | undefined = this.config[propName];
 
-            if (typeof value == 'undefined' && required) {
-                throw new Error(`Missing required configuration option "${propName}"`);
+            if (typeof value == 'undefined') {
+                if (required) {
+                    throw new Error(`Missing required configuration option "${propName}"`);
+                }
+
+                continue;
             }
 
             let types = {
