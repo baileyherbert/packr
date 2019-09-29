@@ -2,17 +2,17 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const path = require("path");
 const fs = require("fs");
-const convict = require("convict");
 const mkdirp = require("mkdirp");
 const zlib = require("zlib");
 const schema_1 = require("./config/schema");
 const namespace_1 = require("./namespace");
 const terminal_1 = require("./terminal");
 const user_error_1 = require("./error/user-error");
+const config_1 = require("./config/config");
 class Project {
     constructor(targetDirectory) {
         this.targetDirectory = targetDirectory;
-        this.config = convict(schema_1.default);
+        this.config = config_1.config(schema_1.default);
         this.directoryPath = path.resolve(targetDirectory);
         this.configFilePath = path.join(this.directoryPath, 'packr.json');
         // Check that the cwd exists
@@ -28,8 +28,13 @@ class Project {
      * Loads the project's configuration and validates it.
      */
     async load() {
-        this.config.loadFile(this.configFilePath);
-        this.config.validate();
+        try {
+            this.config.loadFile(this.configFilePath);
+            this.config.validate();
+        }
+        catch (error) {
+            throw new user_error_1.UserError(error.message);
+        }
     }
     /**
      * Generates and returns the contents of the bundled file as a string.
@@ -161,7 +166,6 @@ class Project {
     encode(raw) {
         switch (this.config.get('encoding')) {
             case 'deflate': return zlib.deflateRawSync(raw).toString('base64');
-            case 'gzip': return zlib.gzipSync(raw).toString('base64');
             case 'base64': return Buffer.from(raw).toString('base64');
         }
     }

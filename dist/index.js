@@ -6,19 +6,19 @@ const terminal_1 = require("./terminal");
 const build_1 = require("./commands/build");
 const watch_1 = require("./commands/watch");
 const expand_1 = require("./commands/expand");
+const info_1 = require("./commands/info");
 async function bootstrap() {
     let commands = terminal_1.Terminal.getCommands('build');
     let command = commands[0];
     let args = commands.slice(1);
-    // Build ('build' or 'b')
     if (command == 'build' || command == 'b')
         return await build_1.build(args);
-    // Watch and build ('watch' or 'w')
     if (command == 'watch' || command == 'w')
         return await watch_1.watch(args);
-    // Expand
     if (command == 'expand' || command == 'e')
         return await expand_1.expand(args);
+    if (command == 'info' || command == 'i')
+        return await info_1.info(args);
 }
 bootstrap().catch(error => {
     if (error instanceof user_error_1.UserError)

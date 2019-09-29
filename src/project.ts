@@ -1,6 +1,5 @@
 import * as path from 'path';
 import * as fs from 'fs';
-import * as convict from 'convict';
 import * as mkdirp from 'mkdirp';
 import * as zlib from 'zlib';
 
@@ -8,12 +7,13 @@ import schema from './config/schema';
 import { Namespace, Bit } from './namespace';
 import { Terminal } from './terminal';
 import { UserError } from './error/user-error';
+import { config } from './config/config';
 
 export class Project {
 
     private directoryPath : string;
     private configFilePath : string;
-    private config = convict(schema);
+    private config = config(schema);
     private bits : Bit[];
     private embeddedFiles : EmbeddedFile[];
 
@@ -38,8 +38,13 @@ export class Project {
      * Loads the project's configuration and validates it.
      */
     public async load() {
-        this.config.loadFile(this.configFilePath);
-        this.config.validate();
+        try {
+            this.config.loadFile(this.configFilePath);
+            this.config.validate();
+        }
+        catch (error) {
+            throw new UserError(error.message);
+        }
     }
 
     /**
@@ -197,7 +202,6 @@ export class Project {
     public encode(raw: string) {
         switch (this.config.get('encoding')) {
             case 'deflate': return zlib.deflateRawSync(raw).toString('base64');
-            case 'gzip': return zlib.gzipSync(raw).toString('base64');
             case 'base64': return Buffer.from(raw).toString('base64');
         }
     }
