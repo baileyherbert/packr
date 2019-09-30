@@ -41,5 +41,9 @@ exports.default = {
             }
         },
         default: null
+    },
+    debugging: {
+        format: Boolean,
+        default: false
     }
 };

@@ -55,7 +55,7 @@ export class Project {
         let mainMethodName = this.getMainMethod();
         let configEncoded = fs.readFileSync(this.configFilePath).toString('base64');
         let buildInfoEncoded =  this.getBuildInformation();
-        let debugging = Terminal.hasFlag('--debug', '-d') ? 'true' : 'false';
+        let debugging = this.config.get('debugging') || (Terminal.hasFlag('--debug', '-d') ? 'true' : 'false');
 
         // Generate the bundle
         let bundle = this.getFilledTemplate({

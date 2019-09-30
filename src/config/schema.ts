@@ -40,6 +40,10 @@ export default {
             }
         },
         default: <'deflate' | null> null
+    },
+    debugging: {
+        format: Boolean,
+        default: false
     }
 
 };
