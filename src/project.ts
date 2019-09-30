@@ -59,7 +59,10 @@ export class Project {
 
         // Generate the bundle
         let bundle = this.getFilledTemplate({
-            bitsArray, mainMethodName, configEncoded, buildInfoEncoded, debugging
+            bitsArray, mainMethodName, configEncoded, buildInfoEncoded, debugging,
+            author: this.config.get('author'),
+            version: this.config.get('version'),
+            year: (new Date()).getFullYear()
         });
 
         // Ensure the output directory exists

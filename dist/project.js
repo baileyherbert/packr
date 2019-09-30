@@ -47,7 +47,10 @@ class Project {
         let debugging = this.config.get('debugging') || (terminal_1.Terminal.hasFlag('--debug', '-d') ? 'true' : 'false');
         // Generate the bundle
         let bundle = this.getFilledTemplate({
-            bitsArray, mainMethodName, configEncoded, buildInfoEncoded, debugging
+            bitsArray, mainMethodName, configEncoded, buildInfoEncoded, debugging,
+            author: this.config.get('author'),
+            version: this.config.get('version'),
+            year: (new Date()).getFullYear()
         });
         // Ensure the output directory exists
         mkdirp.sync(path.dirname(this.getOutputPath()));
