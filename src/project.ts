@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as mkdirp from 'mkdirp';
 import * as zlib from 'zlib';
+import * as recursive from 'recursive-readdir';
 
 import schema from './config/schema';
 import { Namespace, Bit } from './namespace';
@@ -54,7 +55,7 @@ export class Project {
         let bitsArray = await this.getBitsArray();
         let mainMethodName = this.getMainMethod();
         let configEncoded = fs.readFileSync(this.configFilePath).toString('base64');
-        let buildInfoEncoded =  this.getBuildInformation();
+        let buildInfoEncoded = await this.getBuildInformation();
         let debugging = this.config.get('debugging') || (Terminal.hasFlag('--debug', '-d') ? 'true' : 'false');
 
         // Generate the bundle
@@ -73,7 +74,7 @@ export class Project {
         let stream = fs.createWriteStream(this.getOutputPath(), { flags: 'a' });
 
         // Append embedded files
-        for (let file of this.getEmbeddedFiles()) {
+        for (let file of await this.getEmbeddedFiles()) {
             if (file.data) {
                 stream.write(file.data);
             }
@@ -92,13 +93,13 @@ export class Project {
     /**
      * Returns information about the current build in base64 encoding.
      */
-    private getBuildInformation() {
+    private async getBuildInformation() {
         return Buffer.from(JSON.stringify({
             built_at: Math.floor(new Date().getTime() / 1000),
             bits: this.bits.map(bit => bit.name),
             encoding: this.config.get('encoding'),
             fileCompression: this.config.get('file_compression'),
-            files: this.getEmbeddedFiles().map(file => {
+            files: (await this.getEmbeddedFiles()).map(file => {
                 if (!fs.existsSync(file.path)) {
                     throw new UserError(`Cannot find embedded file: ${file.path}`);
                 }
@@ -114,7 +115,7 @@ export class Project {
                     size = fs.statSync(file.path).size;
                 }
 
-                return { name: file.name, size };
+                return { name: file.name, size, originalName: file.originalName };
             })
         }, null, 4)).toString('base64');
     }
@@ -154,7 +155,7 @@ export class Project {
     /**
      * Returns an array of all embedded files in the project.
      */
-    public getEmbeddedFiles() {
+    public async getEmbeddedFiles() {
         if (!this.embeddedFiles) {
             this.embeddedFiles = [];
             let configured = this.config.get('files');
@@ -162,16 +163,48 @@ export class Project {
             for (let name in configured) {
                 let relativePath = configured[name];
                 let realPath = path.resolve(this.directoryPath, relativePath);
+                let stat = fs.statSync(realPath);
 
-                this.embeddedFiles.push({
-                    name,
-                    originalName: relativePath,
-                    path: realPath
-                });
+                if (stat.isFile()) {
+                    this.embeddedFiles.push({
+                        name,
+                        originalName: relativePath,
+                        path: realPath
+                    });
+                }
+                else {
+                    let files = (await this.getFilesRecursively(realPath)).map(file => {
+                        let fileName = file.substring(realPath.length + 1);
+                        let originalName = path.join(relativePath, fileName).replace(/\\/g, '/');
+                        let innerName = path.join(name, fileName).replace(/\\/g, '/');
+
+                        return {
+                            name: innerName,
+                            originalName,
+                            path: file
+                        };
+                    });
+
+                    files.forEach(file => {
+                        this.embeddedFiles.push(file);
+                    });
+                }
             }
         }
 
         return this.embeddedFiles;
+    }
+
+    /**
+     * Recursively searches for files in the given path.
+     */
+    private getFilesRecursively(path: string) {
+        return new Promise<string[]>((resolve, reject) => {
+            recursive(path, (err, files) => {
+                if (err) return reject(err);
+                resolve(files);
+            });
+        });
     }
 
     /**

@@ -62,7 +62,7 @@ async function info(args) {
     buildInfo.files.forEach(file => {
         let name = file.name;
         let size = file.size;
-        let originalFileName = path.basename(config.files[name]);
+        let originalFileName = file.originalName || path.basename(config.files[name]);
         files.push({
             name, size, originalFileName
         });
