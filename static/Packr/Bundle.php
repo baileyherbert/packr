@@ -97,10 +97,28 @@ class Bundle {
 
         // Decompression
         $mode = static::getBuildInfo()->fileCompression;
-        if ($mode == 'deflate') $data = gzinflate($data);
+        if ($mode == 'deflate') $data = @gzinflate($data);
 
         fclose($handle);
         return $data;
+    }
+
+    public static function checkFileIntegrity($name) {
+        $content = self::getFile($name);
+        $hash = md5($content);
+        $entry = null;
+
+        foreach (self::getBuildInfo()->files as $file) {
+            if ($file->name == $name) {
+                $entry = $file;
+            }
+        }
+
+        if (is_null($entry)) {
+            throw new Exception('Failed to check integrity of embedded file (' . $name . ') because its entry could not be found.');
+        }
+
+        return ($hash === $entry->hash);
     }
 
 }

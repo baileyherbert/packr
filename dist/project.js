@@ -5,6 +5,7 @@ const fs = require("fs");
 const mkdirp = require("mkdirp");
 const zlib = require("zlib");
 const recursive = require("recursive-readdir");
+const md5 = require("md5");
 const schema_1 = require("./config/schema");
 const namespace_1 = require("./namespace");
 const terminal_1 = require("./terminal");
@@ -86,16 +87,15 @@ class Project {
                 if (!fs.existsSync(file.path)) {
                     throw new user_error_1.UserError(`Cannot find embedded file: ${file.path}`);
                 }
-                let size;
+                file.data = fs.readFileSync(file.path);
+                let size = file.data.length;
+                let hash = md5(file.data);
                 if (this.config.get('file_compression')) {
-                    // Because compression is enabled, we need to read the file and compress it now
-                    let data = file.data = this.encodeFile(fs.readFileSync(file.path));
-                    size = data.length;
+                    // Because compression is enabled, we need to compress it now to determine the final size
+                    file.data = this.encodeFile(file.data);
+                    size = file.data.length;
                 }
-                else {
-                    size = fs.statSync(file.path).size;
-                }
-                return { name: file.name, size, originalName: file.originalName };
+                return { name: file.name, size, originalName: file.originalName, hash };
             })
         }, null, 4)).toString('base64');
     }

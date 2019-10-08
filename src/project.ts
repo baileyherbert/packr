@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as mkdirp from 'mkdirp';
 import * as zlib from 'zlib';
 import * as recursive from 'recursive-readdir';
+import * as md5 from 'md5';
 
 import schema from './config/schema';
 import { Namespace, Bit } from './namespace';
@@ -104,18 +105,17 @@ export class Project {
                     throw new UserError(`Cannot find embedded file: ${file.path}`);
                 }
 
-                let size : number;
+                file.data = fs.readFileSync(file.path);
+                let size = file.data.length;
+                let hash = md5(file.data);
 
                 if (this.config.get('file_compression')) {
-                    // Because compression is enabled, we need to read the file and compress it now
-                    let data = file.data = this.encodeFile(fs.readFileSync(file.path));
-                    size = data.length;
-                }
-                else {
-                    size = fs.statSync(file.path).size;
+                    // Because compression is enabled, we need to compress it now to determine the final size
+                    file.data = this.encodeFile(file.data);
+                    size = file.data.length;
                 }
 
-                return { name: file.name, size, originalName: file.originalName };
+                return { name: file.name, size, originalName: file.originalName, hash };
             })
         }, null, 4)).toString('base64');
     }
