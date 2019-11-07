@@ -10,11 +10,18 @@ import { Namespace, Bit } from './namespace';
 import { Terminal } from './terminal';
 import { UserError } from './error/user-error';
 import { config } from './config/config';
+import { Composer } from './bundler/composer';
 
 export class Project {
 
     private directoryPath : string;
     private configFilePath : string;
+    private composerFilePath : string;
+
+    private composer = false;
+    private composerData ?: ComposerConfiguration;
+    private composerReader ?: Composer;
+
     private config = config(schema);
     private bits : Bit[];
     private embeddedFiles : EmbeddedFile[];
@@ -24,15 +31,37 @@ export class Project {
     public constructor(private targetDirectory: string) {
         this.directoryPath = path.resolve(targetDirectory);
         this.configFilePath = path.join(this.directoryPath, 'packr.json');
+        this.composerFilePath = path.join(this.directoryPath, 'composer.json');
 
         // Check that the cwd exists
         if (!fs.existsSync(this.directoryPath)) {
             throw new UserError('Directory does not exist: ' + this.directoryPath);
         }
 
-        // Check for the packr.json file
-        if (!fs.existsSync(this.configFilePath)) {
+        // Check if this is a composer project
+        if (fs.existsSync(this.composerFilePath)) {
+            this.composer = true;
+        }
+
+        // Check that we have a packr.json or composer.json file
+        if (!fs.existsSync(this.configFilePath) && !this.composer) {
             throw new UserError('Packr project not found at ' + this.directoryPath);
+        }
+
+        // If we only have a composer.json file, make sure it has packr configuration in it
+        else if (!fs.existsSync(this.configFilePath)) {
+            let data = JSON.parse(fs.readFileSync(this.composerFilePath).toString());
+
+            if (!('extra' in data) || typeof data.extra !== 'object' || !('packr' in data.extra)) {
+                throw new UserError('Packr project not found at ' + this.directoryPath);
+            }
+
+            this.composerData = data;
+        }
+
+        // Finally, if we didn't load composer data, turn off the composer feature
+        if (!this.composerData) {
+            this.composer = false;
         }
     }
 
@@ -41,7 +70,20 @@ export class Project {
      */
     public async load() {
         try {
-            this.config.loadFile(this.configFilePath);
+            if (this.composer) {
+                this.config.preload({
+                    name: this.composerData.name,
+                    version: this.composerData.version,
+                    author: this.getAuthorString(this.composerData.authors),
+                    namespaces: [],
+                    ...this.composerData.extra.packr
+                });
+            }
+
+            if (fs.existsSync(this.configFilePath)) {
+                this.config.loadFile(this.configFilePath);
+            }
+
             this.config.validate();
         }
         catch (error) {
@@ -55,7 +97,7 @@ export class Project {
     public async compile() {
         let bitsArray = await this.getBitsArray();
         let mainMethodName = this.getMainMethod();
-        let configEncoded = fs.readFileSync(this.configFilePath).toString('base64');
+        let configEncoded = this.config.toString('base64');
         let buildInfoEncoded = await this.getBuildInformation();
         let debugging = this.config.get('debugging') || (Terminal.hasFlag('--debug', '-d') ? 'true' : 'false');
 
@@ -95,10 +137,16 @@ export class Project {
      * Returns information about the current build in base64 encoding.
      */
     private async getBuildInformation() {
+        let configFileEncoded = fs.existsSync(this.configFilePath) ? fs.readFileSync(this.configFilePath).toString() : null;
+        let composerFileEncoded = this.composer ? fs.readFileSync(this.composerFilePath).toString() : null;
+
         return Buffer.from(JSON.stringify({
             built_at: Math.floor(new Date().getTime() / 1000),
             bits: this.bits.map(bit => bit.name),
             encoding: this.config.get('encoding'),
+            features: {
+                composer: this.composer,
+            },
             fileCompression: this.config.get('file_compression'),
             files: (await this.getEmbeddedFiles()).map(file => {
                 if (!fs.existsSync(file.path)) {
@@ -116,7 +164,11 @@ export class Project {
                 }
 
                 return { name: file.name, size, originalName: file.originalName, hash };
-            })
+            }),
+            configuration: {
+                primary: configFileEncoded,
+                composer: composerFileEncoded
+            }
         }, null, 4)).toString('base64');
     }
 
@@ -218,9 +270,17 @@ export class Project {
             // Add the Packr namespace
             this.namespaces.push(new Namespace(this, 'Packr\\', path.join(__dirname, '../static/Packr')));
 
+            // Add PSR-0 namespaces from composer
+            let composer0 = this.getComposer().getNamespacesPsr0();
+            for (let prefix in composer0) mappedNamespaces[prefix] = composer0[prefix];
+
+            // Add PSR-4 namespaces from composer
+            let composer4 = this.getComposer().getNamespacesPsr4();
+            for (let prefix in composer4) mappedNamespaces[prefix] = composer4[prefix];
+
             // Add namespaces from the configuration file
             for (let namespace in mappedNamespaces) {
-                let namespaceName = namespace.replace(/\\$/g, '') + '\\';
+                let namespaceName = namespace.replace(/\\$/g, '') + (!namespace.endsWith('_') ? '\\' : '');
                 let namespacePath = path.join(this.directoryPath, mappedNamespaces[namespace]);
 
                 this.namespaces.push(new Namespace(this, namespaceName, namespacePath));
@@ -228,6 +288,17 @@ export class Project {
         }
 
         return this.namespaces;
+    }
+
+    /**
+     * Returns a `Composer` instance for reading the vendor.
+     */
+    protected getComposer() {
+        if (!this.composerReader) {
+            this.composerReader = new Composer(this.directoryPath);
+        }
+
+        return this.composerReader;
     }
 
     /**
@@ -295,10 +366,27 @@ export class Project {
     public resolveNamespace(mappedNamespace: string, mappedPath: string, filePath: string) {
         if (!filePath.startsWith(mappedPath)) throw new Error('Mapped file path mismatch');
 
+        let prefix = mappedNamespace.substring(0, mappedNamespace.length - 1);
+        let separator = mappedNamespace.substring(mappedNamespace.length - 1);
         let relativePath = filePath.substring(mappedPath.length);
-        let className = relativePath.replace(/\.php$/i, '').replace('/', '\\');
 
-        return (mappedNamespace + className).replace(/\\\\/g, '\\');
+        if (separator === '\\') {
+            let className = relativePath.replace(/\.php$/i, '').replace('/', '\\');
+            return (mappedNamespace + className).replace(/\\\\/g, '\\');
+        }
+        else if (separator === '_') {
+            relativePath = relativePath.replace(/\.php$/i, '').replace('/', '\\');
+
+            while (relativePath.startsWith('\\')) {
+                relativePath = relativePath.substring(1);
+            }
+
+            if (relativePath.startsWith(prefix + '\\')) {
+                return prefix + '_' + relativePath.substring(prefix.length + 1).replace(/\\/g, '_');
+            }
+        }
+
+        throw new Error(`Could not calculate namespace for ${relativePath} (separator: '${separator}')`);
     }
 
     /**
@@ -338,6 +426,25 @@ export class Project {
         return this.configFilePath;
     }
 
+    /**
+     * Returns the first author as a string from a composer-style author array.
+     * @param authors
+     */
+    private getAuthorString(authors: { name ?: string; email ?: string; }[]) {
+        if (Array.isArray(authors)) {
+            if (authors.length > 0) {
+                let author = authors[0];
+
+                if (typeof author === 'object' && 'name' in author) {
+                    return author.name + ('email' in author ? ` <${author.email}>` : '');
+                }
+            }
+        }
+        else if (typeof authors === 'string') {
+            return authors;
+        }
+    }
+
 }
 
 export type EmbeddedFile = {
@@ -345,4 +452,13 @@ export type EmbeddedFile = {
     originalName: string;
     path: string;
     data ?: Buffer;
+};
+
+export type ComposerConfiguration = {
+    name ?: string;
+    description ?: string;
+    version ?: string;
+    authors ?: { name ?: string; email ?: string; }[];
+    license ?: string;
+    extra ?: any;
 };

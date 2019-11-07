@@ -22,12 +22,9 @@ export class SourceFile {
 
         let firstBracket = content.indexOf('{');
         let search = firstBracket >= 0 ? content.substring(0, firstBracket) : content;
-        let namespace = search.indexOf('namespace ');
-        if (namespace < 0) throw new Error('did not specify a namespace (indexof)');
 
         let match = search.match(/^[\t ]*namespace ((?:[\w_]+\\)*[\w_]+)[\t ]*(?:;|{|$)/m);
-        if (!match) throw new Error('did not specify a namespace (regex)');
-        if (match[1] != this.namespaceName) throw new Error(`did not match the expected namespace (${match[1]} != ${this.namespaceName})`);
+        if (match && match[1] != this.namespaceName) throw new Error(`did not match the expected namespace (${match[1]} != ${this.namespaceName})`);
 
         return this.namespace.getProject().encode(content);
     }

@@ -24,6 +24,14 @@ export class ConfigurationStore<T> {
         this.config = config;
     }
 
+    public preload(data: T) {
+        if (typeof data !== 'object') {
+            throw new Error('Preload data must be an object');
+        }
+
+        this.config = data;
+    }
+
     public validate() {
         for (let propName in this.schema) {
             let { format, required } = this.schema[propName];
@@ -80,6 +88,11 @@ export class ConfigurationStore<T> {
 
         return this.schema[name].default;
     }
+
+    public toString(type: 'utf8' | 'base64' | 'hex' = 'utf8') {
+        return Buffer.from(JSON.stringify(this.config, null, 4)).toString(type);
+    }
+
 }
 
 export function config<T>(schema: Schema<T>): ConfigurationStore<T> {
