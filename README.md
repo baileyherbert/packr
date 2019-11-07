@@ -1,12 +1,22 @@
-# Packr
+[![Packr](https://i.bailey.sh/MMvFGSN.png)](https://github.com/baileyherbert/packr)
 
-Packr is a command line tool that consolidates a full PHP project down into a single bundled PHP file. The resulting bundle can be executed wherever an interpreter is available, including on the command line or on a web server.
+<p align="center">
+  <a aria-label="Build" href="https://travis-ci.org/baileyherbert/packr">
+    <img alt="" src="https://img.shields.io/travis/baileyherbert/packr?style=for-the-badge&labelColor=000000">
+  </a>
+  <a aria-label="NPM version" href="https://www.npmjs.com/package/@baileyherbert/packr">
+    <img alt="" src="https://img.shields.io/npm/v/@baileyherbert/packr.svg?style=for-the-badge&labelColor=000000">
+  </a>
+  <a aria-label="License" href="https://github.com/baileyherbert/packr/blob/master/LICENSE">
+    <img alt="" src="https://img.shields.io/npm/l/@baileyherbert/packr.svg?style=for-the-badge&labelColor=000000">
+  </a>
+</p>
 
-Packr can also attach files to the bundle, such as compressed file archives or database exports, and these contents files can be easily retrieved by your script. This makes Packr a great tool for creating single-file installers or command line tools.
+---
 
-Furthermore, bundled source code is deflated by default, meaning the final size of the bundle will often be noticeably smaller than the original source files. Inflation occurs at runtime and only for classes which get autoloaded.
+Packr is a command line tool that bundles a PHP project into a single file, along with its dependencies, assets, and any other necessary files. The bundled file can be used like any other PHP script, including through the command line and on a web server. Internally, source code is loaded through autoloading which can be customized, or inferred from Composer.
 
-## Table of contents
+---
 
 - [Introduction](#introduction)
     - [Installation](#installation)
@@ -26,6 +36,8 @@ Furthermore, bundled source code is deflated by default, meaning the final size 
     - [Namespaces](#namespaces)
     - [Embedding files](#embedding-files)
     - [Compression](#compression)
+
+---
 
 ## Introduction
 
