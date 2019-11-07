@@ -108,7 +108,7 @@ export async function expand(args: string[]) {
 
                             mkdirp.sync(fileDirPath);
                             fs.writeFileSync(filePath, '<?php\n\n' + fileData.toString());
-                            console.log(chalk.green('+ Restored:'), filePath, stamp);
+                            console.log(chalk.green('+ Restored:'), getShortPath(outputDir, filePath), stamp);
 
                             break;
                         }
@@ -127,8 +127,8 @@ export async function expand(args: string[]) {
         embedded.push({
             name: file.name,
             size: file.size,
-            extractPath: path.resolve(outputDir, config.files[file.name]),
-            offset,
+            extractPath: path.resolve(outputDir, file.originalName),
+            offset
         });
 
         offset += file.size;
@@ -137,7 +137,7 @@ export async function expand(args: string[]) {
     // If we have any embedded files, let's find the start position
     if (embedded.length > 0) {
         let handle = await openFile(targetFile, 'r');
-        let startOffset = contents.indexOf('__halt_compiler();') + 18;
+        let startOffset = contents.indexOf('__halt_compiler();') + 19;
 
         for (let file of embedded) {
             let start = startOffset + file.offset;
@@ -169,7 +169,7 @@ export async function expand(args: string[]) {
             let expandedPercent = Math.floor(((expandedSize - originalSize) / originalSize) * 100 + 0.5);
             let stamp = (expandedPercent > 0 ? `(inflated ${expandedPercent}%)` : '');
 
-            console.log(chalk.cyan('+ Extracted:'), file.extractPath, stamp);
+            console.log(chalk.cyan('+ Extracted:'), getShortPath(outputDir, file.extractPath), stamp);
         };
 
         fs.close(handle, (err) => {});
@@ -205,5 +205,13 @@ function writeFile(file: number, buffer: Buffer) : Promise<void> {
     });
 }
 
-type EmbeddedFileRecord = { name: string; size: number; };
+function getShortPath(parent: string, child: string) {
+    if (child.startsWith(parent)) {
+        return child.substring(parent.length + 1);
+    }
+
+    return child;
+}
+
+type EmbeddedFileRecord = { name: string; size: number; originalName: string; hash: string; };
 type EmbeddedFileDescriptor = { name: string; extractPath: string; size: number; offset: number; };

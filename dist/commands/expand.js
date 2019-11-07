@@ -91,7 +91,7 @@ async function expand(args) {
                             let stamp = (expandedPercent > 0 ? `(inflated ${expandedPercent}%)` : '');
                             mkdirp.sync(fileDirPath);
                             fs.writeFileSync(filePath, '<?php\n\n' + fileData.toString());
-                            console.log(chalk_1.default.green('+ Restored:'), filePath, stamp);
+                            console.log(chalk_1.default.green('+ Restored:'), getShortPath(outputDir, filePath), stamp);
                             break;
                         }
                     }
@@ -107,15 +107,15 @@ async function expand(args) {
         embedded.push({
             name: file.name,
             size: file.size,
-            extractPath: path.resolve(outputDir, config.files[file.name]),
-            offset,
+            extractPath: path.resolve(outputDir, file.originalName),
+            offset
         });
         offset += file.size;
     });
     // If we have any embedded files, let's find the start position
     if (embedded.length > 0) {
         let handle = await openFile(targetFile, 'r');
-        let startOffset = contents.indexOf('__halt_compiler();') + 18;
+        let startOffset = contents.indexOf('__halt_compiler();') + 19;
         for (let file of embedded) {
             let start = startOffset + file.offset;
             let remaining = file.size;
@@ -138,7 +138,7 @@ async function expand(args) {
             }
             let expandedPercent = Math.floor(((expandedSize - originalSize) / originalSize) * 100 + 0.5);
             let stamp = (expandedPercent > 0 ? `(inflated ${expandedPercent}%)` : '');
-            console.log(chalk_1.default.cyan('+ Extracted:'), file.extractPath, stamp);
+            console.log(chalk_1.default.cyan('+ Extracted:'), getShortPath(outputDir, file.extractPath), stamp);
         }
         ;
         fs.close(handle, (err) => { });
@@ -172,4 +172,10 @@ function writeFile(file, buffer) {
             resolve();
         });
     });
+}
+function getShortPath(parent, child) {
+    if (child.startsWith(parent)) {
+        return child.substring(parent.length + 1);
+    }
+    return child;
 }
