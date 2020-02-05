@@ -59,6 +59,7 @@ export async function info(args: string[]) {
     let version = config.version || '1.0.0';
     let author = config.author || 'Unknown';
     let fileCompressionMode = buildInfo.fileCompression;
+    let fileEncodingMode = buildInfo.fileEncoding;
     let encodingMode = buildInfo.encoding;
     let builtAt = new Date(buildInfo.built_at * 1000);
     let numberBits : number = buildInfo.bits.length;
@@ -97,6 +98,7 @@ export async function info(args: string[]) {
     drawValue('Classes', `${numberBits.toLocaleString()} user (+${standardBits} integrated)`);
     drawValue('Encoding', encodingMode + (encodingMode !== 'base64' ? ', base64' : ''));
     drawValue('Compression', fileCompressionMode || 'disabled');
+    drawValue('File encoding', fileEncodingMode || 'disabled');
     console.log();
 
     // Embedded files
@@ -127,7 +129,7 @@ function drawValue(name: string, value: string | number) {
 function getFileSize(bytes: number) {
     if (bytes >= 1024 * 512) return (Math.ceil(100 * (bytes / 1048576)) / 100) + ' MiB';
     if (bytes >= 1024) return (Math.ceil(100 * (bytes / 1024)) / 100) + ' KiB';
-    return bytes + ' bytes';
+    return bytes + ' B';
 }
 
 function openFile(targetFile: string, flags: string) : Promise<number> {

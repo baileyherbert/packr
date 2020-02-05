@@ -41,6 +41,14 @@ export default {
         },
         default: <'deflate' | null> null
     },
+    file_encoding: {
+        format: (val: string) => {
+            if (val !== 'base64' && val !== null) {
+                throw new Error('must be one of: deflate, or null');
+            }
+        },
+        default: <'base64' | null> 'base64'
+    },
     debugging: {
         format: Boolean,
         default: false

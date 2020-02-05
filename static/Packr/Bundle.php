@@ -48,6 +48,10 @@ class Bundle {
         return self::getBuildInfo()->fileCompression;
     }
 
+    public static function getFileEncodingMode() {
+        return self::getBuildInfo()->fileEncoding;
+    }
+
     public static function getFile($name, $processor = null, $chunkSize = 4096) {
         // Check that the file exists
         $original = self::getBuildInfo()->files;
@@ -68,6 +72,11 @@ class Bundle {
         // Disallow buffering when compression is enabled
         if (self::getCompressionMode() !== null && $processor !== null) {
             throw new Exception('Cannot buffer file "' . $name . '" because compression is enabled');
+        }
+
+        // Disallow buffering when encoding is enabled
+        if (self::getFileEncodingMode() !== null && $processor !== null) {
+            throw new Exception('Cannot buffer file "' . $name . '" because encoding is enabled');
         }
 
         // Use a default processor if one is not supplied
@@ -94,6 +103,9 @@ class Bundle {
 
             $processor($chunk);
         }
+
+        // Decoding
+        if (self::getFileEncodingMode() == 'base64') $data = @base64_decode($data);
 
         // Decompression
         $mode = static::getBuildInfo()->fileCompression;

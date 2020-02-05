@@ -148,6 +148,7 @@ export class Project {
                 composer: this.composer,
             },
             fileCompression: this.config.get('file_compression'),
+            fileEncoding: this.config.get('file_encoding'),
             files: (await this.getEmbeddedFiles()).map(file => {
                 if (!fs.existsSync(file.path)) {
                     throw new UserError(`Cannot find embedded file: ${file.path}`);
@@ -160,6 +161,12 @@ export class Project {
                 if (this.config.get('file_compression')) {
                     // Because compression is enabled, we need to compress it now to determine the final size
                     file.data = this.encodeFile(file.data);
+                    size = file.data.length;
+                }
+
+                if (this.config.get('file_encoding') === 'base64') {
+                    // Base64 encoding is enabled, so we must again encode it immediately to know the final size
+                    file.data = Buffer.from(file.data!.toString('base64'));
                     size = file.data.length;
                 }
 

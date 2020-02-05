@@ -81,6 +81,7 @@ export async function expand(args: string[]) {
     let buildInfo = JSON.parse(buildInfoText);
     let bitEncodingMode : ('base64' | 'deflate') = buildInfo.encoding;
     let fileCompressionMode : ('deflate' | null) = buildInfo.fileCompression;
+    let fileEncoding : ('base64' | null) = buildInfo.fileEncoding;
 
     // Parse bits
     let bitsLines = bitsArrayMatch[1].trim().split(/\n+/);
@@ -160,6 +161,12 @@ export async function expand(args: string[]) {
 
             let originalSize = fs.statSync(file.extractPath).size;
             let expandedSize = originalSize;
+
+            if (fileEncoding == 'base64') {
+                let decoded = Buffer.from(fs.readFileSync(file.extractPath).toString(), 'base64').toString('binary');
+                fs.writeFileSync(file.extractPath, decoded, { encoding: 'binary' });
+                expandedSize = fs.statSync(file.extractPath).size;
+            }
 
             if (fileCompressionMode == 'deflate') {
                 fs.writeFileSync(file.extractPath, zlib.inflateRawSync(fs.readFileSync(file.extractPath)));
