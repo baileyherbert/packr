@@ -125,6 +125,16 @@ export async function expand(args: string[]) {
     let embedded : EmbeddedFileDescriptor[] = [];
     let offset = 0;
     buildInfo.files.forEach((file: EmbeddedFileRecord) => {
+        if (!file.originalName) {
+            if (typeof config.files === 'object' && file.name in config.files) {
+                file.originalName = config.files[file.name];
+            }
+            else {
+                console.log(chalk.red('> Error:'), 'Failed to restore embedded file (could not determine path):', file.originalName);
+                return;
+            }
+        }
+
         embedded.push({
             name: file.name,
             size: file.size,
