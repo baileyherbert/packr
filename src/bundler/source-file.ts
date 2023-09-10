@@ -6,7 +6,8 @@ export class SourceFile {
     private namespaceName : string;
 
     public constructor(private namespace: Namespace, private className: string, private path: string) {
-        this.namespaceName = className.replace(/\\[\w_]+$/, '');
+        this.className = className.replace(/\//g, '\\');
+        this.namespaceName = className.replace(/\//g, '\\').replace(/\\[\w_]+$/, '');
     }
 
     /**
