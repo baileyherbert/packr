@@ -1,16 +1,31 @@
 {
-    "compilerOptions": {
-        "target": "es2017",
-        "module": "commonjs",
-        "moduleResolution": "node",
-        "newLine": "lf",
-        "noEmitOnError": true,
-        "pretty": true,
-        "rootDir": "src",
-        "outDir": "dist",
-        "types": ["node"]
-    },
-    "exclude": [
-        "node_modules"
+	"compilerOptions": {
+		"outDir": "dist",
+
+		"module": "commonjs",
+		"moduleResolution": "node",
+
+		"target": "es6",
+		"lib": ["es6"],
+
+		"declaration": true,
+		"declarationMap": false,
+		"sourceMap": true,
+
+		"downlevelIteration": true,
+		"esModuleInterop": false,
+		"experimentalDecorators": true,
+		"resolveJsonModule": true,
+
+		"importsNotUsedAsValues": "remove",
+
+		"skipLibCheck": true,
+		"stripInternal": true,
+		"removeComments": false,
+
+		"newLine": "lf"
+	},
+	"include": [
+        "src/**/*.ts"
     ]
 }

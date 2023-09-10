@@ -48,7 +48,7 @@ export async function watch(args: string[]) {
 }
 
 async function handleFileChange(args: string[], filePath: string) {
-    let rebuild = (() => new Promise(resolve => {
+    let rebuild = (() => new Promise<void>(resolve => {
         setTimeout(async () => {
             wip = build(args);
             await wip;
